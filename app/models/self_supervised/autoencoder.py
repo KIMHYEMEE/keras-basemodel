@@ -99,3 +99,50 @@ class cnn_autoencoder:
         model = Model(inputs, outputs)
 
         return model
+    
+# vae
+class vae:
+    def __init__(self, input_shape):
+        self.input_shape = input_shape
+        self.loss = ''
+        self.layers()
+        self.model = self.modeling()
+    
+    def get_info(self):
+
+        return
+    
+    def layers(self):
+
+        return
+    
+    def modeling(self):
+
+        return # model
+    
+    def encoder(self):
+
+        return # model
+
+# VQ-VAE
+class vq_vae:
+    def __init__(self, input_shape):
+        self.input_shape = input_shape
+        self.loss = ''
+        self.layers()
+        self.model = self.modeling()
+    
+    def get_info(self):
+
+        return
+    
+    def layers(self):
+        return
+    
+    def modeling(self):
+
+        return # model
+    
+    def encoder(self):
+
+        return # model
