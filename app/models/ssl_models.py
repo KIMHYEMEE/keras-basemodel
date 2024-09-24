@@ -1,6 +1,11 @@
 from app.models.self_supervised.autoencoder import *
 
-def call_model(model_name):
-    model = simple_ae(128)
+def build_model(model_name):
+
+    if model_name == 'simple_autoencoder':
+        model = simple_autoencoder(128)
+
+    else:
+        model = None
 
     return model

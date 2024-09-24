@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.models.ssl_models import call_model
+from app.models.ssl_models import build_model
 
 router = APIRouter()
 
@@ -8,9 +8,14 @@ def sl_model(model_name:str):
     return
 
 @router.post("/self-supervised-learning/{model_name}")
-def ssl_model(model_name:str='test'):
+def ssl_model(model_name:str='simple_autoencoder'):
 
-    model = call_model(model_name)
-    print(model.summary())
+    model = build_model(model_name)
+
+    if model != None:
+        print(model.model.summary())
+
+        if 'encoder' in model_name:
+            print(model.encoder().summary())
 
     return

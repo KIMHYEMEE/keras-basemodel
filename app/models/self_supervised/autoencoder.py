@@ -2,13 +2,35 @@ from keras.layers import Input, Dense
 from keras.models import Model
 
 # simple autoencoder
-def simple_ae(input_shape:int):
-    enc_input = Input((input_shape,))
-    enc_h = Dense(32)(enc_input)
-    enc_output = Dense(16)(enc_h) # dec_input
-    dec_h = Dense(32)(enc_output)
-    dec_output = Dense(input_shape)(dec_h)
+class simple_autoencoder:
+    def __init__(self, input_shape:int):
+        self.input_shape = input_shape
+        self.layers()
+        self.model = self.modeling()
+
+    def layers(self):
+        # encoder
+        self.enc_h = Dense(32)
+        self.enc_output = Dense(16)
+        # decoder
+        self.dec_h = Dense(32)
+        self.dec_output = Dense(self.input_shape)
+
+    def modeling(self):
+        inputs = Input((self.input_shape,))
+        h = self.enc_h(inputs)
+        h = self.enc_output(h)
+        h = self.dec_h(h)
+        outputs = self.dec_output(h)
+
+        model = Model(inputs,outputs)
+
+        return model
     
-    model = Model(enc_input, dec_output)
-    
-    return model
+    def encoder(self):
+        inputs = Input((self.input_shape,))
+        h = self.enc_h(inputs)
+        outputs = self.enc_output(h)
+        model = Model(inputs,outputs)
+
+        return model
