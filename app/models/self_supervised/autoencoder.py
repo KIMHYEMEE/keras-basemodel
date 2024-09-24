@@ -43,7 +43,7 @@ class simple_autoencoder:
 
         return model
     
-
+# cnn autoencoder
 class cnn_autoencoder:
     def __init__(self,input_shape):
         self.input_shape = input_shape
