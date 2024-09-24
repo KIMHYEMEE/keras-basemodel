@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from app.models.ssl_models import build_model
 
 router = APIRouter()
@@ -18,4 +18,10 @@ def ssl_model(model_name:str='simple_autoencoder'):
         if 'encoder' in model_name:
             print(model.encoder().summary())
 
-    return
+        model_info = {'model_name':model_name,
+                      'info':model.get_info()}
+        
+    else:
+        raise HTTPException(status_code=404)
+
+    return model_info
