@@ -120,13 +120,15 @@ class vae:
     def __init__(self, input_shape):
         self.input_shape = input_shape
         self.latent_dim = 2
-        self.loss = ''
+        self.loss = 'reconstruction_kl'
         self.layers()
         self.model = self.modeling()
     
     def get_info(self):
-
-        return
+        model_info = {'input_shape':self.model.input_shape,
+                      'output_shape':self.model.output_shape,
+                      'loss':self.loss}
+        return model_info
     
     def layers(self):
         # encoder
@@ -144,7 +146,7 @@ class vae:
                       Reshape((7,7,64)),
                       Conv2DTranspose(64,3,activation='relu',strides=2,padding="same"),
                       Conv2DTranspose(32,3,activation='relu',strides=2,padding="same"),
-                      Conv2DTranspose(1,3,activation='sigmoid',strides=2,padding="same")                      
+                      Conv2DTranspose(1,3,activation='sigmoid',padding="same")                      
                       ]
 
         return
