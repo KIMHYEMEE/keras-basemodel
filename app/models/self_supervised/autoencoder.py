@@ -204,24 +204,116 @@ class vae:
         return total_loss
 
 # VQ-VAE
+class VectorQuantize(keras.layers.Layer):
+    def __init__(self, n_embeddings, embedding_dim, beta=0.25, **kwargs):
+        super().__init__(**kwargs)
+        self.embedding_dim = embedding_dim
+        self.n_embeddings = n_embeddings
+
+        self.beta = beta # best kept between [0.25, 2] as per the paper
+
+        # init the embeddings
+        w_init = tf.random_uniform_initializer()
+        self.embeddings = tf.Variable(
+            initial_value = w_init(
+                shape = (self.embedding_dim, self.n_embeddings), dtype='float32'
+            ),
+            trainable=True,
+            name='embedding_vqvae'
+        )
+
+    
+    def call(self,x):
+        input_shape=tf.shape(x)
+        flattened = tf.reshape(x, [-1,self.embedding_dim])
+
+        # quantization
+        encoding_indices = self.get_code_indices(flattened)
+        encodings = tf.one_hot(encoding_indices, self.n_embeddings)
+        quantized = tf.matmul(encodings, self.embeddings, transpose_b=True)
+
+        quantized = tf.reshape(quantized, input_shape)
+        quantized = x + tf.stop_gradient(quantized-x)
+
+        return quantized
+    
+    def get_code_indices(self, flattened_inputs):
+        similarity = tf.matmul(flattened_inputs, self.embeddings)
+        distance = (
+            tf.reduce_sum(flattened_inputs ** 2, axis=1, keepdims=True)
+            + tf.reduce_sum(self.embeddings ** 2, axis=0)
+            - 2 * similarity
+        )
+
+        encoding_indices = tf.argmin(distance, axis=1)
+        return encoding_indices
+
 class vq_vae:
     def __init__(self, input_shape):
         self.input_shape = input_shape
+        self.latent_dim = 16
+        self.n_embeddings=64
         self.loss = ''
         self.layers()
         self.model = self.modeling()
     
     def get_info(self):
-
-        return
+        model_info = {'input_shape':self.model.input_shape,
+                      'output_shape':self.model.output_shape,
+                      'loss':self.loss}
+        return model_info
     
     def layers(self):
+        # encoder
+        self.enc_h = [Conv2D(32,3, activation='relu', strides=2, padding='same'),
+                 Conv2D(64,3, activation='relu', strides=2, padding='same'),
+                 Conv2D(self.latent_dim,1,padding='same')
+                 ]
+
+        # vector quantizer
+        self.vq_layer = VectorQuantize(self.n_embeddings, self.latent_dim, name='vector_quantizer')
+
+        # decoder
+        self.dec_h = [Conv2DTranspose(64,3, activation='relu',strides=2, padding='same'),
+                      Conv2DTranspose(32,3, activation='relu',strides=2, padding='same'),
+                      Conv2DTranspose(1,3,padding='same')
+                      ]
+
         return
     
     def modeling(self):
+        encoder = self.encoder()
+        decoder = self.decoder(encoder.output_shape[1:])
 
-        return # model
+        inputs = encoder.input
+        encoder_outputs = encoder(inputs)
+        quantized_latent = self.vq_layer(encoder_outputs)
+        reconstructions = decoder(quantized_latent)
+
+        model = Model(inputs, reconstructions, name='vq_vae')
+
+        return model
     
     def encoder(self):
+        inputs = Input(shape=self.input_shape)
+        x = self.enc_h[0](inputs)
 
-        return # model
+        for h in self.enc_h[1:-1]:
+            x = h(x)
+        
+        outputs = self.enc_h[-1](x)
+        model = Model(inputs, outputs, name='encoder')
+
+        return model
+    
+    def decoder(self, input_shape):
+        inputs = Input(shape=input_shape)
+        x = self.dec_h[0](inputs)
+
+        for h in self.dec_h[1:-1]:
+            x = h(x)
+        
+        outputs = self.dec_h[-1](x)
+        model = Model(inputs, outputs, name='decoder')
+
+        return model
