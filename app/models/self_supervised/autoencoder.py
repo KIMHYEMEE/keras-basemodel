@@ -1,5 +1,6 @@
 import keras
 import tensorflow as tf
+import numpy as np
 from keras import ops
 from keras.layers import Input, Dense, Conv2D, MaxPooling2D, Conv2DTranspose, Flatten, Reshape
 from keras.models import Model, Sequential
@@ -8,33 +9,39 @@ from keras.models import Model, Sequential
 class simple_autoencoder:
     def __init__(self, input_shape:int):
         self.input_shape = input_shape
-        self.loss = 'mse'
+        self.loss_name = 'mse'
         self.layers()
         self.model = self.modeling()
 
     def get_info(self):
-        model_info = {'input_shape':self.input_shape,
-                      'output_shape':self.input_shape,
-                      'loss':self.loss}
+        model_info = {'input_shape':self.model.input_shape,
+                      'output_shape':self.model.output_shape,
+                      'loss':self.loss_name}
         return model_info
 
     def layers(self):
+        flatten_shape = 1
+        for v in self.input_shape:
+            flatten_shape *= v
+
         # encoder
         self.enc_h = Dense(32)
         self.enc_output = Dense(16)
         # decoder
         self.dec_h = Dense(32)
-        self.dec_output = Dense(self.input_shape)
+        self.dec_output = Dense(flatten_shape)
 
     def modeling(self):
-        inputs = Input((self.input_shape,))
-        h = self.enc_h(inputs)
+        inputs = Input(self.input_shape)
+        h = Flatten()(inputs)
+        h = self.enc_h(h)
         h = self.enc_output(h)
         h = self.dec_h(h)
         outputs = self.dec_output(h)
+        outputs = Reshape(self.input_shape)(outputs)
 
         model = Model(inputs,outputs)
-        model.compile(loss=self.loss)
+        model.compile(loss=self.loss_name)
 
         return model
     
@@ -50,14 +57,14 @@ class simple_autoencoder:
 class cnn_autoencoder:
     def __init__(self,input_shape):
         self.input_shape = input_shape
-        self.loss = 'binary_crossentropy'
+        self.loss_name = 'binary_crossentropy'
         self.layers()
         self.model = self.modeling()
     
     def get_info(self):
-        model_info = {'input_shape':self.input_shape,
-                      'output_shape':self.input_shape,
-                      'loss':self.loss}
+        model_info = {'input_shape':self.model.input_shape,
+                      'output_shape':self.model.output_shape,
+                      'loss':self.loss_name}
         return model_info
     
     def layers(self):
@@ -87,7 +94,7 @@ class cnn_autoencoder:
         outputs = self.dec_layers[-1](h)
 
         model = Model(inputs, outputs)
-        model.compile(loss=self.loss)
+        model.compile(loss=self.loss_name)
 
         return model
 
@@ -120,14 +127,14 @@ class vae:
     def __init__(self, input_shape):
         self.input_shape = input_shape
         self.latent_dim = 2
-        self.loss = 'reconstruction_kl'
+        self.loss_name = 'reconstruction_kl'
         self.layers()
         self.model = self.modeling()
     
     def get_info(self):
         model_info = {'input_shape':self.model.input_shape,
                       'output_shape':self.model.output_shape,
-                      'loss':self.loss}
+                      'loss':self.loss_name}
         return model_info
     
     def layers(self):
@@ -190,14 +197,14 @@ class vae:
         return model
     
     def loss(self,y_true,y_pred):
-        # y: [reconstruction, z_mean, z_log_var]
+        reconstruction, z_mean, z_log_var = self.model(y_true)
         reconstruction_loss = ops.mean(
             ops.sum(
-                keras.losses.binary_crossentropy(y_true[0],y_pred[0]),
+                keras.losses.binary_crossentropy(y_true,reconstruction),
                 axis=(1,2),
             )
         )
-        kl_loss = -0.5 * (1 + y_pred[2] - ops.squre(y_pred[1]) - ops.exp(y_pred[2]))
+        kl_loss = -0.5 * (1 + z_log_var - ops.square(z_mean) - ops.exp(z_log_var))
         kl_loss = ops.mean(ops.sum(kl_loss, axis=1))
         total_loss = reconstruction_loss + kl_loss
 
@@ -259,14 +266,14 @@ class vq_vae:
         self.latent_dim = 16
         self.n_embeddings=64
         self.train_variance = train_variance
-        self.loss = ''
+        self.loss_name = ''
         self.layers()
         self.model = self.modeling()
     
     def get_info(self):
         model_info = {'input_shape':self.model.input_shape,
                       'output_shape':self.model.output_shape,
-                      'loss':self.loss}
+                      'loss':self.loss_name}
         return model_info
     
     def layers(self):
@@ -327,8 +334,8 @@ class vq_vae:
 
     def loss(self,y_true,y_pred):
         reconstruction_loss = (
-            tf.reduce_mean((y_true - y_pred)** 2) / self.train_variance 
+            ops.mean((y_true - y_pred)** 2) / self.train_variance 
         )
-        total_loss = reconstruction_loss + sum(self.model.losses)
+        total_loss = reconstruction_loss + ops.sum(self.model.losses)
 
         return total_loss
