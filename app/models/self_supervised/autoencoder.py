@@ -1,15 +1,14 @@
 import keras
 import tensorflow as tf
-import numpy as np
 from keras import ops
 from keras.layers import Input, Dense, Conv2D, MaxPooling2D, Conv2DTranspose, Flatten, Reshape
-from keras.models import Model, Sequential
+from keras.models import Model
 
 # simple autoencoder
 class simple_autoencoder:
     def __init__(self, input_shape:int):
         self.input_shape = input_shape
-        self.loss_name = 'mse'
+        self.loss_name = 'binary_crossentropy'
         self.layers()
         self.model = self.modeling()
 
