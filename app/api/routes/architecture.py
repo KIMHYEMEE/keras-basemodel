@@ -31,13 +31,13 @@ def ssl_model(model_name:ModelNameSSL):
 @router.get("/self-supervised-learning/{model_name}/test/mnist")
 def ssl_mnist(model_name:ModelNameSSL,
               epochs:int=1,
-              batch_size:int=None):
+              batch_size:int=128):
     (x_train, _), (x_test, _) = keras.datasets.mnist.load_data()
 
     x_train = np.expand_dims(x_train, -1)
     x_test = np.expand_dims(x_test, -1)
-    x_train_scaled = (x_train / 255.0) - 0.5
-    x_test_scaled = (x_test / 255.0) - 0.5
+    x_train_scaled = (x_train / 255.0)
+    x_test_scaled = (x_test / 255.0)
 
     data_variance = np.var(x_train / 255.0)
 
@@ -46,7 +46,7 @@ def ssl_mnist(model_name:ModelNameSSL,
     if batch_size is None:
         model.model.fit(x_train_scaled,x_train_scaled, epochs=epochs)
     else:
-        model.model.fit(x_train_scaled,x_train_scaled, epochs=epochs, batch_size=batch_size)
+        model.model.fit(x_train_scaled,x_train_scaled, epochs=epochs, batch_size=batch_size, shuffle=True)
 
     reconstructed_img = model.model.predict(x_train_scaled[:1])[0]
     if len(reconstructed_img.shape) > 3:

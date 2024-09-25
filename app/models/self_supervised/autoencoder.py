@@ -79,18 +79,12 @@ class cnn_autoencoder:
                            ]
 
     def modeling(self):
+        encoder = self.encoder()
+        decoder = self.decoder(encoder.output_shape[1:])
+
         inputs = Input(self.input_shape)
-
-        # encoder
-        h = self.enc_layers[0](inputs)
-        for enc_layer in self.enc_layers[1:]:
-            h = enc_layer(h)
-        
-        # decoder
-        for dec_layer in self.dec_layers[:-1]:
-            h = dec_layer(h)
-
-        outputs = self.dec_layers[-1](h)
+        h = encoder(inputs)
+        outputs = decoder(h)
 
         model = Model(inputs, outputs)
         model.compile(loss=self.loss_name)
@@ -100,13 +94,23 @@ class cnn_autoencoder:
     def encoder(self):
         inputs = Input(self.input_shape)
 
-        h = self.enc_layers[0](inputs)
-        for enc_layer in self.enc_layers[1:-1]:
-            h = enc_layer(h)
-        outputs = self.enc_layers[-1](h)
+        x = self.enc_layers[0](inputs)
+        for h in self.enc_layers[1:-1]:
+            x = h(x)
+        outputs = self.enc_layers[-1](x)
 
         model = Model(inputs, outputs)
 
+        return model
+    
+    def decoder(self,input_shape):
+        inputs = Input(input_shape)
+        x = self.dec_layers[0](inputs)
+        for h in self.dec_layers[1:-1]:
+            x = h(x)
+        outputs = self.dec_layers[-1](x)
+
+        model = Model(inputs, outputs)
         return model
     
 # vae
@@ -139,7 +143,7 @@ class vae:
     def layers(self):
         # encoder
         self.enc_h = [Conv2D(32, 3, activation='relu',strides=2, padding='same'),
-                 Conv2D(32, 3, activation='relu',strides=2, padding='same'),
+                 Conv2D(64, 3, activation='relu',strides=2, padding='same'),
                  Flatten(),
                  Dense(16, activation='relu')
                  ]
