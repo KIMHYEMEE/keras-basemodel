@@ -233,6 +233,11 @@ class VectorQuantize(keras.layers.Layer):
         quantized = tf.matmul(encodings, self.embeddings, transpose_b=True)
 
         quantized = tf.reshape(quantized, input_shape)
+
+        commitment_loss = tf.reduce_mean((tf.stop_gradient(quantized) - x) **2)
+        codebook_loss = tf.reduce_mean((quantized - tf.stop_gradient(x))**2)
+        self.add_loss(self.beta * commitment_loss + codebook_loss)
+
         quantized = x + tf.stop_gradient(quantized-x)
 
         return quantized
@@ -249,10 +254,11 @@ class VectorQuantize(keras.layers.Layer):
         return encoding_indices
 
 class vq_vae:
-    def __init__(self, input_shape):
+    def __init__(self, input_shape,train_variance:float=None):
         self.input_shape = input_shape
         self.latent_dim = 16
         self.n_embeddings=64
+        self.train_variance = train_variance
         self.loss = ''
         self.layers()
         self.model = self.modeling()
@@ -291,6 +297,7 @@ class vq_vae:
         reconstructions = decoder(quantized_latent)
 
         model = Model(inputs, reconstructions, name='vq_vae')
+        model.compile(loss=self.loss)
 
         return model
     
@@ -317,3 +324,11 @@ class vq_vae:
         model = Model(inputs, outputs, name='decoder')
 
         return model
+
+    def loss(self,y_true,y_pred):
+        reconstruction_loss = (
+            tf.reduce_mean((y_true - y_pred)** 2) / self.train_variance 
+        )
+        total_loss = reconstruction_loss + sum(self.model.losses)
+
+        return total_loss
